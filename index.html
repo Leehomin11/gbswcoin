@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GBSW COIN</title>
+    <link rel="icon" type="image/png" href="logo.png" />
+    <link rel="stylesheet" href="index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* styles.css */
+
+      /* Reset CSS */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f2f2f2;
+      }
+      body {
+        display: flex;
+        user-select: none;
+        flex-direction: column;
+        min-height: 100vh; /* 화면 전체 높이를 사용하기 위해 */
+      }
+
+      main {
+        flex: 1; /* 컨텐츠 영역이 footer 위로 덮치도록 */
+        overflow-y: auto; /* 컨텐츠가 창을 넘어갈 때 스크롤이 생기도록 */
+      }
+
+      footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        background-color: #333;
+        color: #fff;
+        padding: 10px 0;
+        text-align: center;
+      }
+
+      /* CSS for transaction log */
+      .transaction-log {
+        overflow-y: auto;
+        max-height: 200px; /* Adjust the max-height according to your design */
+        padding: 10px;
+        border-top: 1px solid #ccc;
+        transition: max-height 0.5s ease; /* Animation for height change */
+      }
+
+      .transaction-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #f8f8f8;
+        transition: transform 0.3s ease; /* Animation for item entry */
+      }
+
+      /* Disable text selection */
+      body {
+        user-select: none;
+      }
+
+      .transaction-time {
+        font-size: 0.8em;
+        color: #666;
+      }
+
+      #transactionLog p {
+        margin: 0;
+      }
+
+      header {
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+      }
+
+      .logo img {
+        width: 40px;
+        height: 40px;
+        margin-right: 10px;
+      }
+
+      nav ul {
+        list-style-type: none;
+        display: flex;
+      }
+
+      nav ul li {
+        margin-right: 20px;
+      }
+
+      nav ul li a {
+        color: #fff;
+        text-decoration: none;
+      }
+
+      main {
+        padding: 20px;
+      }
+
+      .chart-section {
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      .price-info {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .price-info h2 {
+        font-size: 18px;
+      }
+
+      .price-info p {
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .buy-sell-buttons button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        color: #fff;
+      }
+
+      .buy-sell-buttons .buy-button {
+        background-color: #4caf50;
+      }
+
+      .buy-sell-buttons .sell-button {
+        background-color: #f44336;
+      }
+
+      footer {
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+        margin-top: 170px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <h1>GBSW COIN</h1>
+      </div>
+    </header>
+    <main>
+      <section class="chart-section">
+        <canvas id="myChart" width="1390" height="300"></canvas>
+        <div class="price-info">
+          <h2>Current Price:</h2>
+          <p id="currentPrice">Loading...</p>
+          <div class="buy-sell-buttons">
+            <button class="buy-button" onclick="buy()">Buy</button>
+            <button class="sell-button" onclick="sell()">Sell</button>
+          </div>
+        </div>
+      </section>
+      <div id="transactionLog" class="transaction-log"></div>
+    </main>
+    <footer>
+      <p>&copy; 2024 GBSW COIN. All rights reserved.</p>
+    </footer>
+
+    <script>
+      // Function to get or initialize chart data from local storage
+      function getChartData() {
+        const storedData = localStorage.getItem("chartData");
+        if (storedData) {
+          return JSON.parse(storedData);
+        } else {
+          return {
+            labels: [],
+            datasets: [
+              {
+                label: "GBSW",
+                backgroundColor: "rgba(0, 0, 0, 0)",
+                borderColor: [],
+                borderWidth: 2,
+                data: [],
+              },
+            ],
+          };
+        }
+      }
+
+      // Function to save chart data to local storage
+      function saveChartData(chartData) {
+        localStorage.setItem("chartData", JSON.stringify(chartData));
+      }
+
+      // Initialize chart data
+      let data = getChartData();
+
+      // Chart options
+      let options = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          xAxes: [{ display: false }],
+          yAxes: [
+            {
+              ticks: {
+                suggestedMax: Infinity, // Set maximum y-axis value to infinity
+              },
+              display: false,
+            },
+          ],
+        },
+      };
+
+      let ctx = document.getElementById("myChart").getContext("2d");
+      let myChart = new Chart(ctx, {
+        type: "line",
+        data: data,
+        options: options,
+      });
+
+      // Update chart and current price every 10 seconds
+      setInterval(() => {
+        let newValue = Math.floor(Math.random() * 1000000);
+        let color =
+          newValue > data.datasets[0].data[data.datasets[0].data.length - 1]
+            ? "red"
+            : "blue";
+
+        data.labels.push("");
+        data.datasets[0].data.push(newValue);
+        data.datasets[0].borderColor.push(color);
+
+        if (data.labels.length > 100) {
+          data.labels.shift();
+          data.datasets[0].data.shift();
+          data.datasets[0].borderColor.shift();
+        }
+
+        myChart.update();
+        // Update current price
+        document.getElementById("currentPrice").innerText = `₩${newValue}`;
+
+        // Save chart data to local storage
+        saveChartData(data);
+      }, 10000);
+
+      // Buy function
+      function buy() {
+        console.log("Buy clicked");
+        const transactionLog = document.getElementById("transactionLog");
+        const transaction = document.createElement("div");
+        transaction.classList.add("transaction-item");
+        transaction.innerHTML = `
+          <span>Bought</span>
+          <span class="transaction-time">${getTime()}</span>
+        `;
+        transactionLog.appendChild(transaction);
+        // Scroll to the bottom
+        transactionLog.scrollTop = transactionLog.scrollHeight;
+      }
+
+      // Sell function
+      function sell() {
+        console.log("Sell clicked");
+        const transactionLog = document.getElementById("transactionLog");
+        const transaction = document.createElement("div");
+        transaction.classList.add("transaction-item");
+        transaction.innerHTML = `
+          <span>Sold</span>
+          <span class="transaction-time">${getTime()}</span>
+        `;
+        transactionLog.appendChild(transaction);
+        // Scroll to the bottom
+        transactionLog.scrollTop = transactionLog.scrollHeight;
+      }
+
+      // Function to get current time
+      function getTime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, "0");
+        const minutes = now.getMinutes().toString().padStart(2, "0");
+        return `${hours}:${minutes}`;
+      }
+    </script>
+  </body>
+</html>
